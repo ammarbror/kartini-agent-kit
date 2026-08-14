@@ -1,7 +1,7 @@
 {
   "name": "kartini-agent-kit",
   "description": "Kar-Tini workflows for global Codex use and terminal automation.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "Kar-Tini"
   },

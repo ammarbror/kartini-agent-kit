@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kartini-agent-kit"
-version = "0.1.0"
+version = "0.1.1"
 description = "Kar-Tini workflows for Codex and the terminal"
 requires-python = ">=3.9"
 
