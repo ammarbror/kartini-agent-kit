@@ -1,0 +1,21 @@
+{
+  "name": "kartini-agent-kit",
+  "description": "Kar-Tini workflows for global Codex use and terminal automation.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Kar-Tini"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Kartini Agent Kit",
+    "shortDescription": "Safe Git, Jira, and Bitbucket workflows",
+    "longDescription": "Global Kar-Tini workflows for reviewing, validating, committing, and optionally pushing code.",
+    "developerName": "Kar-Tini",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": [
+      "Initialize Kar-Tini integrations",
+      "Run the Kar-Tini ship-code workflow"
+    ]
+  }
+}
