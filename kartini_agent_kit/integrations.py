@@ -6,6 +6,9 @@ import base64
 import json
 import urllib.error
 import urllib.request
+from urllib.parse import quote
+from pathlib import Path
+import subprocess
 from typing import Dict
 
 
@@ -31,6 +34,40 @@ def validate_connections(config: Dict[str, str]):
     jira_status, _ = _request(f"{jira_url}/rest/api/3/myself", config["JIRA_EMAIL"], config["JIRA_API_TOKEN"])
     bitbucket_status, _ = _request("https://api.bitbucket.org/2.0/user", config["BITBUCKET_EMAIL"], config["BITBUCKET_API_TOKEN"])
     return jira_status == 200 and bitbucket_status == 200
+
+
+def bitbucket_remote(root: Path) -> tuple[str, str]:
+    result = subprocess.run(
+        ["git", "remote", "get-url", "origin"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+    )
+    if result.returncode:
+        raise RuntimeError("Git remote 'origin' is not configured")
+    remote = result.stdout.strip()
+    if remote.startswith("git@bitbucket.org:"):
+        path = remote.split(":", 1)[1]
+    elif remote.startswith("https://bitbucket.org/"):
+        path = remote.split("bitbucket.org/", 1)[1]
+    else:
+        raise RuntimeError("Git remote 'origin' is not a Bitbucket Cloud URL")
+    path = path.rstrip("/")
+    if path.endswith(".git"):
+        path = path[:-4]
+    parts = path.split("/", 1)
+    if len(parts) != 2 or not all(parts):
+        raise RuntimeError("Bitbucket remote must contain workspace and repository")
+    return parts[0], parts[1]
+
+
+def validate_bitbucket_remote(config: Dict[str, str], root: Path):
+    workspace, repository = bitbucket_remote(root)
+    url = f"https://api.bitbucket.org/2.0/repositories/{quote(workspace)}/{quote(repository)}"
+    status, _ = _request(url, config["BITBUCKET_EMAIL"], config["BITBUCKET_API_TOKEN"])
+    if status != 200:
+        raise RuntimeError("Bitbucket remote could not be accessed with the configured account")
+    return workspace, repository
 
 
 def add_jira_comment(config: Dict[str, str], ticket: str, comment: str):

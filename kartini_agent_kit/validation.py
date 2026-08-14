@@ -3,32 +3,42 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 
-def detect_validation(root: Path) -> Optional[List[str]]:
+def detect_validations(root: Path) -> List[List[str]]:
+    commands: List[List[str]] = []
     if (root / "package.json").exists():
         try:
             data = json.loads((root / "package.json").read_text(encoding="utf-8"))
-            if "test" in data.get("scripts", {}):
-                return ["npm", "test"]
+            scripts = data.get("scripts", {})
+            for name in ("lint", "typecheck", "test", "build"):
+                if name in scripts:
+                    commands.append(["npm", "run", name])
         except (OSError, json.JSONDecodeError):
             pass
     if (root / "pyproject.toml").exists() or (root / "pytest.ini").exists() or (root / "tests").exists():
-        return ["python3", "-m", "pytest"]
+        if shutil.which("pytest"):
+            commands.append(["pytest"])
+        elif (root / "tests").exists():
+            commands.append(["python3", "-m", "unittest", "discover", "-s", "tests", "-v"])
     if (root / "Cargo.toml").exists():
-        return ["cargo", "test"]
+        commands.append(["cargo", "test"])
     if (root / "go.mod").exists():
-        return ["go", "test", "./..."]
-    return None
+        commands.append(["go", "test", "./..."])
+    if (root / "tsconfig.json").exists() and not any(command[0:2] == ["npm", "run"] and command[2] == "typecheck" for command in commands):
+        if shutil.which("npx"):
+            commands.append(["npx", "tsc", "--noEmit"])
+    return commands
 
 
-def run_validation(root: Path) -> Tuple[Optional[List[str]], Optional[int], str]:
-    command = detect_validation(root)
-    if not command:
-        return None, None, "No standard validation command detected."
-    result = subprocess.run(command, cwd=root, text=True, capture_output=True)
-    output = (result.stdout + result.stderr).strip()
-    return command, result.returncode, output[-4000:]
+def run_validations(root: Path) -> List[Tuple[List[str], int, str]]:
+    results = []
+    for command in detect_validations(root):
+        result = subprocess.run(command, cwd=root, text=True, capture_output=True)
+        output = (result.stdout + result.stderr).strip()
+        results.append((command, result.returncode, output[-4000:]))
+    return results

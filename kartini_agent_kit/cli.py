@@ -9,10 +9,10 @@ from pathlib import Path
 from .commit_message import conventional_message
 from .config import REQUIRED_KEYS, global_config_path, load_config, missing_keys, write_config
 from .git_inspection import commit_all_changes, inspect_repository, push
-from .integrations import add_jira_comment, validate_connections
+from .integrations import add_jira_comment, validate_bitbucket_remote, validate_connections
 from .review import classify_files, has_blocking_findings, review_diff
 from .ticket import extract_ticket
-from .validation import run_validation
+from .validation import run_validations
 
 
 def init_command(args):
@@ -68,21 +68,23 @@ def ship_command(args):
     if has_blocking_findings(findings):
         print("Shipping stopped because blocking findings were detected.", file=sys.stderr)
         return 1
-    command, code, output = run_validation(state.root)
-    if command:
-        print(f"Validation: {' '.join(command)} -> {'passed' if code == 0 else 'failed'}")
-        if code:
-            print(output, file=sys.stderr)
-            return 1
+    validations = run_validations(state.root)
+    if validations:
+        for command, code, output in validations:
+            print(f"Validation: {' '.join(command)} -> {'passed' if code == 0 else 'failed'}")
+            if code:
+                print(output, file=sys.stderr)
+                return 1
     else:
-        print(f"Validation: {output}")
+        print("Validation: no standard validation command detected.")
     summary = args.summary or input("Short change summary: ").strip()
     message = conventional_message(ticket, summary)
     print(f"\nProposed commit: {message}")
     if not args.yes and not _ask("Create this commit?"):
         print("Commit cancelled.")
         return 0
-    commit_all_changes(state.root, message)
+    print(f"Files to commit: {', '.join(state.changed_files)}")
+    commit_all_changes(state.root, state.changed_files, message)
     print(f"Committed: {message}")
     should_push = args.push or (not args.no_prompt and _ask("Push this commit to the remote?"))
     if not should_push:
@@ -91,6 +93,12 @@ def ship_command(args):
     missing = missing_keys(config)
     if missing:
         print("Push cancelled: Jira/Bitbucket integration is not configured. Run `kartini init` first.", file=sys.stderr)
+        return 1
+    try:
+        workspace, repository = validate_bitbucket_remote(config, state.root)
+        print(f"Bitbucket remote validated: {workspace}/{repository}")
+    except RuntimeError as exc:
+        print(f"Push cancelled: {exc}", file=sys.stderr)
         return 1
     try:
         push(state.root)

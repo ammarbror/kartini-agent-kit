@@ -35,11 +35,26 @@ def inspect_repository(cwd: Path) -> RepositoryState:
     for line in status.splitlines():
         if len(line) >= 4:
             changed_files.append(line[3:].strip().strip('"'))
+    untracked = run_git(["ls-files", "--others", "--exclude-standard"], root).splitlines()
+    for path in untracked:
+        if path not in changed_files:
+            changed_files.append(path)
+        file_path = root / path
+        if file_path.is_file():
+            untracked_diff = subprocess.run(
+                ["git", "diff", "--no-index", "--", "/dev/null", path],
+                cwd=root,
+                text=True,
+                capture_output=True,
+            ).stdout
+            diff += untracked_diff
     return RepositoryState(root, branch, status, diff, staged_diff, changed_files)
 
 
-def commit_all_changes(root: Path, message: str) -> None:
-    run_git(["add", "-A"], root)
+def commit_all_changes(root: Path, files: List[str], message: str) -> None:
+    if not files:
+        raise RuntimeError("no files selected for commit")
+    run_git(["add", "--", *files], root)
     run_git(["commit", "-m", message], root)
 
 

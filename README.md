@@ -32,4 +32,4 @@ See [.env.example](.env.example). Never replace its placeholders with real crede
 
 ## Safe defaults
 
-`ship-code` requires a Jira key in the branch, blocks on critical/high/bug findings and failed validation, asks before creating a commit, and asks separately before pushing. A Jira comment is created only after a successful push.
+`ship-code` requires a Jira key in the branch, includes untracked files in the review, runs all detected project checks, blocks on critical/high/bug findings and failed validation, stages only the reviewed file list, asks before creating a commit, and asks separately before pushing. Before push it verifies that `origin` is a Bitbucket Cloud repository accessible by the configured account. A Jira comment is created only after a successful push.
