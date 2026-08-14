@@ -4,19 +4,14 @@
 
 `kartini-agent-kit` has two adapters around one workflow concept:
 
-```text
-Codex /init, /ship-code
-          |
-          v
-     skills/*.md  ------>  agent semantic review and interaction
-          |
-          v
-     kartini CLI  ------>  deterministic local operations
-          |
-          +--> Git inspection and staging
-          +--> project validation
-          +--> Jira API
-          +--> Bitbucket Cloud API
+```mermaid
+flowchart LR
+    C[Codex /init<br/>Codex /ship-code] --> S[skills/*.md<br/>semantic review + interaction]
+    S --> K[kartini CLI<br/>deterministic operations]
+    K --> G[Git inspection<br/>and selective staging]
+    K --> V[Project validation]
+    K --> J[Jira API]
+    K --> B[Bitbucket Cloud API]
 ```
 
 The Codex skill is responsible for reasoning about behavior and regressions. The CLI is responsible for repeatable operations that should not depend on model interpretation.
@@ -30,6 +25,8 @@ The Codex skill is responsible for reasoning about behavior and regressions. The
 - Commit and push are separate approval boundaries.
 - Push requires a Bitbucket Cloud `origin` that the configured account can access.
 - Jira comment creation occurs after push, never before.
+
+The workflow intentionally separates reasoning from side effects: Codex decides whether the change is acceptable, while the CLI owns the exact Git and API operations.
 
 ## External API behavior
 

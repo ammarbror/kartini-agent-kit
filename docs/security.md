@@ -1,5 +1,8 @@
 # Security guidance
 
+> [!CAUTION]
+> Treat API tokens like passwords. If a token appears in chat, logs, a commit, or a ticket, revoke it immediately and create a replacement.
+
 ## Credential handling
 
 Use a Bitbucket API token and Jira API token with the smallest practical scope. Store them in the global local config created by `kartini init`, or provide them through the process environment for ephemeral automation.
@@ -12,6 +15,13 @@ Do not:
 - use a token after it has been exposed.
 
 If a token is exposed, revoke it immediately at the provider and generate a replacement.
+
+## Recommended token posture
+
+- Use separate tokens for local development and automation.
+- Grant only the Jira and Bitbucket scopes required by the workflow.
+- Keep the global config readable only by the current user.
+- Prefer environment injection for CI and delete temporary environments after the run.
 
 ## Push approval
 

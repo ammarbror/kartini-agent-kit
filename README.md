@@ -1,6 +1,28 @@
 # kartini-agent-kit
 
-Reusable Kar-Tini workflows for Codex and the terminal. The kit provides one shared workflow for inspecting, reviewing, validating, committing, and optionally pushing code changes.
+<div align="center">
+
+**A safe, repeatable path from local changes to a reviewed commit.**
+
+Reusable Kar-Tini workflows for Codex and the terminal, with Jira and Bitbucket Cloud built into the workflow.
+
+`/init` &nbsp;·&nbsp; `/ship-code` &nbsp;·&nbsp; `kartini init` &nbsp;·&nbsp; `kartini ship-code`
+
+</div>
+
+> [!IMPORTANT]
+> `ship-code` never pushes automatically. It requires a Jira ticket, validates the change, asks before committing, asks again before pushing, and comments on Jira only after a successful push.
+
+## Contents
+
+- [What it provides](#what-it-provides)
+- [Quick start](#quick-start)
+- [The ship-code workflow](#the-ship-code-workflow)
+- [Validation behavior](#validation-behavior)
+- [Configuration](#configuration)
+- [Development](#development)
+- [Troubleshooting](#troubleshooting)
+- [Documentation](#documentation)
 
 ## What it provides
 
@@ -82,7 +104,7 @@ JIRA_URL=https://your-domain.atlassian.net
 
 Never commit a real `.env` file or paste tokens into chat, issues, logs, or commit messages. Revoke and replace a token immediately if it is exposed.
 
-## `/ship-code` workflow
+## The `/ship-code` workflow
 
 Run it from any Git project with a Jira key in the branch name, for example:
 
@@ -91,7 +113,25 @@ git checkout -b feature/KAIRA-654-payment-validation
 kartini ship-code --summary "Add payment validation"
 ```
 
-The workflow:
+```mermaid
+flowchart TD
+    A[Inspect Git state] --> B[Review tracked and untracked changes]
+    B --> C[Run detected validations]
+    C --> D{Blocking finding or failure?}
+    D -- Yes --> E[Stop and report]
+    D -- No --> F[Extract Jira key]
+    F --> G[Show files and commit draft]
+    G --> H{Commit approved?}
+    H -- No --> I[Cancel]
+    H -- Yes --> J[Stage reviewed files and commit]
+    J --> K{Push approved?}
+    K -- No --> L[Finish locally]
+    K -- Yes --> M[Validate Bitbucket origin]
+    M --> N[Push to remote]
+    N --> O[Add non-technical Jira comment]
+```
+
+The workflow steps are:
 
 1. Reads the repository root, current branch, staged/unstaged changes, and untracked files.
 2. Groups changed files by application, tests, configuration, documentation, or other.
@@ -132,7 +172,9 @@ The CLI detects multiple checks instead of assuming that one test command repres
 
 A non-zero validation result blocks commit. If no standard command is detected, the workflow reports that fact explicitly.
 
-## Configuration precedence
+## Configuration
+
+### Precedence
 
 Configuration is loaded in this order, with later values overriding earlier values:
 
@@ -142,6 +184,10 @@ Configuration is loaded in this order, with later values overriding earlier valu
 4. Matching process environment variables.
 
 Project environment files must remain untracked. `.gitignore` already protects `.env` files except `.env.example`.
+
+### Required variables
+
+See [.env.example](.env.example) for the safe template. `kartini init` stores real values in the global local config; it does not modify the repository.
 
 ## Development
 
@@ -166,6 +212,12 @@ tests/                   Unit tests
 .env.example             Safe configuration template
 pyproject.toml            Python package and kartini entry point
 ```
+
+## Documentation
+
+- [Architecture](docs/architecture.md) — boundaries between Codex, CLI, Git, and external APIs.
+- [Security guidance](docs/security.md) — credential handling and approval boundaries.
+- [`.env.example`](.env.example) — placeholder configuration only.
 
 ## Troubleshooting
 
@@ -199,6 +251,6 @@ https://bitbucket.org/workspace/repository.git
 
 Run `kartini init` again with fresh tokens. Do not print tokens while debugging; the CLI intentionally reports only sanitized connection errors.
 
-## Release notes
+## Release workflow
 
 Plugin and CLI versions are defined in both `pyproject.toml` and `.codex-plugin/plugin.json`. Increase both values for a release, run the tests and plugin validator, push to `main`, then refresh the Codex marketplace.
